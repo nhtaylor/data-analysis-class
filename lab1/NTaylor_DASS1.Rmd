@@ -1,0 +1,92 @@
+---
+title: "GR4015 Data Analysis Lab #1"
+author: "Nathan Taylor"
+  html_document:
+    toc: true
+    toc_float: true
+    theme: yeti
+    highlight: tango
+---
+
+## 1. Use the table, summary, or describe command to tabulate one variable; and explain your results.
+
+I chose to look at the variable coded as *poleff3*, which asked respondent to
+respond to the following statement: "The average citizen has considerable 
+influence on politics."" Survey respondents answered on a Likert scale, where a
+response of 1 meant they strongly agreed with the statement and a 5 
+corresponding to strong disagreement.
+
+All of the variables and data for this assignment comes from the 2006 General Social Survey provided on the class's Courseworks page.
+
+```{r}
+library(readr)
+gss <- read_csv("~/Documents/Columbia/S1/DASS-Eirich/Assignments/17.09.27_Lab1/GSS.2006.csv")
+
+# Table 1: Average Person's Influence on Politics, tabulated by number of responses
+table(gss$poleff3)
+
+# Table 2: Average Person's Influence on Politics, tabulated by percentages
+options(digits = 2)
+prop.table(table(gss$poleff3))
+```
+
+Although Table 1 provides the total number of respondents for each answer choice, looking at the percentages provides a clearer picture on where people stand. Half of all respondents disagree or strongly disagree with the phrasing of the statement, while just over a third believe the statement agree or strongly agree with it. 
+
+I'm surprised by this finding because I would imagine that more people would disagree with the statement given the meaning behind "considerable influence." However, people may be considering their influence at a local level whereas I was initially focusing on national politics. So there may be an issue here with how people construe politics more broadly, and consider political action and engagement on a variety of civic and institutional levels.
+
+
+## 2. Using either the plyr or doBy commands, compare the means and standard deviations for one variable, for at least two subgroups and explain your results. 
+
+I was curious whether a person’s job satisfaction was negatively correlated with the number of hours they worked. In other words, I expect to see that as a person works more, satisfaction with their work diminishes. I could see a couple competing theories behind this that might challenge my presumed causal relationship. For example, people who are dissatisfied with their jobs might in fact work less  because of the poor quality of the work. 
+
+Alternatively, people with more satisfying jobs work more because of its fulfilling qualities. It’s possible that both phenomenon could be occurring at the same time, as well as other, unaccounted for processes. To begin with, I looked at the variable *satjob* in the GSS codebook. Respondents were asked "On the  whole, how satisfied are you with the work you do -- would you say you are very satisfied, moderately satisfied, a little dissatisfied, or very dissatisfied?" Responses were coded as follows: (1) very satisfied, (2) moderately satisfied, (3) a little dissatisfied, and (4) very dissatisfied.
+
+```{r}
+# Table 3: Work Satisfaction, tabulated by number of responses
+table(gss$satjob)
+
+# Table 4: Work Satisfaction, tabulated by percentages
+prop.table(table(gss$satjob))
+```
+
+Table 4 shows that an overwhelming majority find their work satisfying to a positive extent (87%). Only 12% of respondents found their work to bring them some amount of dissatisfaction. These findings should be noted for when I examine whether the numbers of hours worked varies with feelings of job satisfaction.
+
+```{r}
+library("plyr")
+options(digits = 4)
+
+# Table 5: Average Weekly Hours Worked by Work Satisfaction Cohort
+ddply(gss, "satjob", summarise, Mean = mean(hrs1, na.rm = T), 
+                                SD = sd(hrs1, na.rm = T))
+```
+
+Quickly scanning Table 5, it doesn't appear as if there is a decisively clear picture. On average, a very satisfied worker works 43 hours a week compared to a very dissatisfied worker who works nearly 38 hours per week. The number of hours someone works slightly increases the more satisfied they are with their jobs. That being said, 5 hours per week difference doesn't come across as substantial compared to the general number of hours people work. 
+
+To confirm the 'messiness' of the table, the standard deviations for the subgroups range from 13.2 to 15.8, equaling roughly a third of the total range. With the variance found in the standard deviations, the data would suggest that there is wide dispersion of hours worked in each satisfaction group, making it difficult to justify any suggestion of significant difference between satisfied and dissatisfied workers.
+
+Both of these observations provide little evidence for my initial hypothesis that job satisfaction and hours worked would negatively correlate. From this cursory glance, in fact, the opposite looks more likely. There could be several explanations for this. One could be a failure to subset the data by part-time and full-time workers. Following this line of thinking, people who work one part-time are unhappy because they want to work more hours. This brings up an issue of work hours elasticity. It could be the case where there is a floor to the number of hours a worker must work in order to effectively participate in the U.S. labor market, which artificially keeps the average of hours worked higher than it would be if people could depend on a greater welfare state. Regardless of the cause, the existence of a relationship between the number of hours worked and job satisfaction did not develop in this exercise.
+
+
+## 3. Using the gmodels or another command, crosstabulate two categorical or ordinal variables (getting proportions); and explain your results
+
+I chose to look at how a person's political party identification might influence their belief in whether the government should help improve the standard of living for Americans in poverty or if that task should be left to the individual person who finds himself or herself in poverty. In the table constructed below, I used the variables *partyid* and *helppoor*. 
+
+The variable *helppoor* codes as an ordinal variable. Respondents who believed that the government should do everything in their power to improve the standard of living among poor Americans were directed to select #1, while respondents who believed that people should be take care of themselves should have select #5. A response of #3 meant that the respondent agreed with both claims, while #2 and #4 represented intermediate points of agreement between the three distinct points.
+
+As I cross-tabulated *helppoor* with the respondent's political party identification, the party identification variable was also ordinal. The range of scores went from 0 meaning "Strongly Democrat" to 6 referring to "Strongly Republican." Responses coded as 7 represented people with no party or those who refused to say. I hypothesized that respondents who identified as Democrat would more likely believe that it is the government's role to help Americans in poverty, while respondents who identified as Republican would more likely agree that in personal responsibility as a solution for poverty amelioration.
+
+```{r}
+library(gmodels)
+
+# Table 6: Political Party Affilliation's Effect on Poverty Amelioration
+CrossTable(gss$helppoor, gss$partyid, 
+           prop.r = FALSE, 
+           prop.c = TRUE, 
+           prop.t = FALSE, 
+           prop.chisq = FALSE, 
+           format = "SPSS")
+```
+
+In total, there were 1,952 recorded responses for both variables. It appears that while my initial hypothesis appears roughly correct, there was a surprising amount of equal consideration to both government and personal means to ameliorate poverty across the political spectrum. People who identified as "Strongly Democrat" believed the government should do everything possible to increase the standard of living among poor Americans the most at 30.7% of the time. Conversely, people who identified as "Strongly Republican" were the group most likely to believe that a person should take of him or herself, responding so 21.6% of the time. On the surface it appears that political party affiliation varies predictably regarding solutions to poverty amelioration.
+
+Table 6, however, also shows that a sizeable portion of people exist across the political spectrum who agree that both the government and the individual can both play a role in improving the standard of living for poor Americans. This response to the *helppoor* variable had the highest selection rate regardless of political affiliation, with nearly 40% agreement across political identification categories. This finding surprised me initially given today's polarizing political climate. This data, however, comes from 2006, showing the importance behind not projecting current political polarization in to the past. As it currently stands, it would be improper to say we could determine the causal relationship between the two variables. A line of future research may be to examine how the cross tabulation of these two variables changes over time.
