@@ -1,0 +1,181 @@
+---
+title: "GR4015 Data Analysis Lab #2"
+author: "Nathan Taylor"
+date: "Wednesday, October 04, 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: yeti
+    highlight: tango
+---
+
+## 1. Recoding continuous to categorical
+
+**Prompt: Recode 1 _sort of_ continuous variable into categories. Tell me what you did and explain the variable(s).**
+
+Using 2006 General Social Survey data, I chose to look at the variable coded as *pray*, which asked people to respond to the following question: 'About how often do you pray?' I tabulated their responses in the following table.
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | Several times a day | 926 | 30.9
+2 | Once a day | 863 | 28.8
+3 | Several times a week | 332 | 11.1
+4 | Once a week | 192 | 6.4
+5 | Less than once a week | 342 | 11.4
+6 | Never | 316 | 10.6
+
+I decided to divide this variable in half, where people who responded that they pray at least several times a week (responses 1 to three) would be recoded as 1 in the new variable *praying*, while everyone else who prays once a week or less are recoded as 0. R code below should illustrate this recoding:
+
+```{r}
+library(readr)
+gss <- read_csv("~/Documents/Columbia/S1/DASS-Eirich/Assignments/17.09.27_Lab1/GSS.2006.csv")
+
+gss$praying <- ifelse((gss$pray <= 3), 1, 0)
+
+# Table 1: Recode of Pray to Praying
+table(gss$praying, gss$pray)
+```
+
+Table 1 confirms that the recoding was successful. Any response recorded as a 1-3 in *pray* appears now a 1 in *praying*, and any respondent recorded as a 4-6 in *pray* is now labeled as a 0 in *praying*. The new variable *praying* has taken the continuous values found in *pray* and transformed them in to categorical data.
+
+## 2. Recoding continuous variable to categorical with labels
+
+**Prompt: Recode 1 other variable and attach value labels. Tell me what you did and explain the variable(s).**
+
+I chose to recode the variable called *parsol*. Respondents saw the following  question: 'Compared to your parents when they were the age you are now, do you think your own standard of living now is much better, somewhat better, about the same, somewhat worse, or much worse than theirs was?' I tabulated their responses in the following table.
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | Much better | 671 | 33.7
+2 | Somewhat better | 624 | 31.4
+3 | About the same | 421 | 21.2
+4 | Somewhat worse | 196 | 9.9
+5 | Much worse | 52 | 2.6
+
+I decided to divide the responses to *parsol* into three separate categories and label them apprporiately. The "better" category includes responses that answered "much better" and "somewhat better." The "same" category reflects people who responded "About the same." Finally, the "worse" category includes respondents who answered the question with "somewhat worse" and "much worse." The following code  reflects these choices.
+
+```{r}
+gss$parsol.cat <- cut(gss$parsol, breaks = c(-1, 2, 3, 5), 
+                      label = c("better", "same", "worse"), 
+                      ordered = TRUE)
+
+# Table 2: Recoding Parsol to Parsol.cat
+table(gss$parsol.cat, gss$parsol)
+```
+
+Table 2 demonstrates that the labels and categories recodes were successful. Now, *parsol.cat* has divided respondents in to three different categories based on their responses to the variable *parsol* just as with the first prompt, however now these values are associated with labels associated with their values.
+
+
+## 3. Cross-tabulating recoded variables
+
+**Prompt: Use one (or both) of your recoded variables to do a cross-tabulation (as you had done last week, with prop.table, doBy, or ddply). Explain your results.**
+
+I decided to investigate the impact prayer frequency has on confidence in  organized religion. I choose to use my *praying* variable from #1 above, since it  divided up people nicely in two group: one that prays very frequently and another that prays infrequently if at all. The other variable I decided to cross-tabulate  was *conclerg*. This variable's question read as, "I am going to name some institutions in this country. As far as the people running  these institutions are concerned, would you say you have a great deal of confidence, only some confidence, or hardly any confidence at all in them? C. Organized religion." The responses to the survey question were as followed:  
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | A great deal | 487 | 16.8
+2 | Only some | 1205 | 60.6
+3 | Hardly any | 396 | 19.9
+8 | Don't know | 50 | 2.5
+9 | No answer | 3 | 0.2
+
+For simplicity's sake, the responses "don't know" and "no answer" will not be included in the following analyses. Below is the code to cross-tabulate the two variables.
+
+```{r}
+library(gmodels)
+# Table 3: Influence of Prayer Frequency on Confidence in Organized Religion
+CrossTable(gss$conclerg, gss$praying, 
+           prop.r = FALSE, 
+           prop.c = TRUE, 
+           prop.t = FALSE, 
+           prop.chisq = FALSE, 
+           format = "SPSS")
+```
+
+A quick glance at Table 3 shows some expected results: people who prayed  frequently had a greater percentage (~31%) express a great deal of confidence in organized religion compared to people who prayed infrequently (~11%). The opposite was true at the other end of the spectrum. People who prayed infrequently had a larger percentage (~33%) of their sample express hardly any confidence in organized religion than compared to those who prayed frequently (18%). When divided by their prayer frequency, respondents share a roughly equal expression of only some confidence in organized religion (56% for infrequent prayer people, and 50% for frequent prayer people). These findings suggest that people share somewhat similar confidence levels in organized religion regardless of prayer frequency, however they vary at the margins and in a manner that one would expect them to differ.
+
+
+## 4. Linear Regression
+
+**Prompt: Run a linear regression with 1 independent and 1 dependent variable. Make all of the recodes necessary to make the model as easy to interpret as possible.  And explain your results.**
+
+I chose to examine the relationship between religious strength, captured in the variable *reliten* and number of children a person has, captured in the variable *childs*. I attempted to verify the hypothesis that a person's self-reported strength in their own religious preference may help describe their  the number of children people have had. While including only one predictor in this model will surely limit the scope of this exercise, it will provide enough information to describe what relationship may exist between religious strength and number of children.
+
+I recoded  *reliten* to improve the interpretability of my regression model. As it's currently written, those with greater amount of strength in their religious preference have a lower number (Moving forward, I will refer to this as religious character). This feature is evident in the responses for the variable below:
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | Strong | 1616 | 35.8
+2 | Not very strong | 1632 | 36.2
+3 | somewhat strong (Vol.) | 482 | 10.7
+4 | No religion | 739 | 16.4
+8 | Don't know | 12 | 0.3
+9 | No answer | 29 | 0.6
+
+For clarity, respondents who chose don't know and "no answer" will not be 
+considered in the linear regression. I reverse coded the variable *reliten* as 
+*relst* to make reading and interpreting the linear regression model more 
+easily interpreted.
+
+```{r}
+# reverse coding relst
+gss$relst <- 5 - gss$reliten
+
+fit1 <- lm(childs ~ relst, data = gss)
+summary(fit1)
+```
+
+For every increase in religious strength level can predict a person having .25 more children. It doesn't look  like there a significant predictive influence from religious character to number of children. Even thought the t-statistics and its corresponding p-value are statistically significant, the adjusted r-squared reveals that only 2% of the variance in the number of children a person has can be attributed to the religious character of the person.
+
+
+## 5. Scatter-/Boxplotting
+
+**Prompt: Plot two variables, either as a scatter plot or boxplot. Explain your results.**
+
+I decided to plot two variables related to how people spend their time -- working and watching television. I expect to find a negative relationship between the number of hours someone spends working per week and the number of hours they spend watching television on a night basis. The more you work, the less time you have to watch television, right?
+
+```{r}
+hist(gss$hrs1,
+     main = paste("Hours worked per week"))
+
+table(gss$hrs1)
+
+summary(gss$hrs1)
+```
+
+The variable *hrs1* measures the reported number of hours that respondents worked each week if they were currently working at the time. The histogram for this variable shows that the majority of respondents work between 35 to 40 hours per week, and the table/summary for *hrs1* confirm this finding with the majority of responses (888) recording 40 hours per week, and representing the median for this variable. The histogram roughly fits a normal distribution.
+
+```{r}
+hist(gss$tvhours,
+     main = paste("Hours of TV watched per day"))
+
+table(gss$tvhours)
+
+summary(gss$tvhours)
+```
+
+The histogram for number of hours of television watched per day looks differently than the hours worked per week. First to note, the scale is in hours of television watched per day. The histogram appears illustrates a positive distribution, where the majority of people watch atleast a few hours of television each night while fewer respondents watch 6 hours or more of television per might. The table for the variable *tvhours* confirms this observation as a majority of people watch between 1 and 5 hours of television nightly. The summary of *tvhours* also suggests a positive distribution as the mean, 2.936, is stretch out larger than the median, 2, by more outlier numbers. 
+
+```{r}
+plot(jitter(gss$hrs1), jitter(gss$tvhours), 
+     main = "Television Hours Per Night as Hours Worked Per Week Increases", 
+     xlab = "Hours Worked per Week", 
+     ylab = "Television Hours Watched per Day", 
+     pch = 9)
+abline(lm(tvhours ~ hrs1, data = gss), col = "blue")
+
+library(ggplot2)
+ggplot(gss, aes(x = hrs1, y = tvhours)) +
+  geom_smooth(method = lm)   +
+  geom_jitter(height = 2, width = 2, shape = 1)
+```
+ 
+After using the two major plotting methods in R, I can see the advantages and  disadvantages to both. The general plot function in R appears functional and the jitter argument combined with the character change allows me to see the density surrounding certain values that show up frequently. However, I found the ggplot graph to better demonstrate that same density. The grey background with white break lines also allowed me to orient the dataplots to some respective value. 
+
+After examining the plots, it appears that some small relationship exists between the number of hours a person works per week and the number of hours they spending watching television daily. The regression line on both plots looks like it has a gradual slope, meaning that the relationship between hours worked and hours spent watching television is not as influential as one might think. On reflection, it surprises me that the number of hours a person works doesn't affect television-watching habits more that it actually does. 
+
+Certainly, there is some degree of data cleaning that, once done, could clarify the graph and our analysis. One person responded that they reportedly watch 24 hours of television each day, for example. I could also have graphed it differently, where the maximum number of hours you can watch per day would be ten, and then this graph would better represent the prominent clustering of data. These adjustments could provide us a clearer picture to a viewer. 
+
+Nevertheless, finding that hours worked per week does not influence hours of television watched per night is still an interesting discovery! It appears that television viewing is an inelastic hobby for the majority of people. As people work more, they still watch a certain number of hours of television each night. It's possible that in their responses, survey respondents actually do watch fewer hours during the week but watch the majority of their television on the weeks, and averaged their daily televisions hours when they reported their response. Alternatively, the graph could suggest that people spend less time doing other activities while keeping the number of hours of television they watch each night roughly the same, if not slightly less, regardless of the hours they work each week.
