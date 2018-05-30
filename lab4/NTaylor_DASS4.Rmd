@@ -1,0 +1,87 @@
+---
+title: "GR4015 Data Analysis Lab #4"
+author: "Nathan Taylor"
+date: "Wednesday, November 1, 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: yeti
+    highlight: tango
+---
+
+## 1. Simple Regression
+
+**Prompt: Run a simple regression, and interpret your results. (Did the results fit your expectations? Why? Why not?**
+
+I decided to use a dataset called "Credit" that focuses on people's credit scores and various other finanial measures germane to the topic. To examine the dataset, I called the structure function in R.
+
+```{r}
+library(readr)
+credit <- read_csv("~/Documents/Columbia/S1/DASS-Eirich/Assignments/17.11.01_Lab4/Credit.csv")
+
+str(credit)
+```
+
+With 400 observations with 12 different variables, there's enough information here worth examining. Being a student currently, I was curious how one's student status as well as income (in thousands of dollars) would influence a person's average credit card debt, recorded in the variable *Balance*. Before I explore the data, I recoded three variables to prepare for some analysis later in this lab.
+
+```{r}
+credit$Female <- ifelse(credit$Gender == "Male", 0, 
+                        ifelse(credit$Gender == "Female", 1, 0))
+
+credit$Student <- ifelse(credit$Student == "No", 0, 
+                        ifelse(credit$Student == "Yes", 1, 0))
+
+credit$Married <- ifelse(credit$Married == "No", 0, 
+                        ifelse(credit$Married == "Yes", 1, 0))
+
+str(credit)
+```
+
+The new structure of credit now reflects the recodes. To answer the question "How does one's income and student status affect a person's credit card debt", I need to regress *Balance* on *Income* and *Student*. I would expect that students would carry more credit card debt than non-students since they have more expenses that cannot be paid off by income. The majority of students' time is spent on their studies rather than remunerative activities in the labor market.
+
+```{r}
+lm1 <- lm(Balance ~ Income + Student, data = credit)
+summary(lm1)
+
+library(visreg)
+visreg(lm(Balance ~ Income + Student, data = credit),
+       xvar = "Income", 
+       by = "Student", 
+       overlay = TRUE, 
+       partial = FALSE, 
+       band = FALSE, 
+       legend = FALSE,
+       line = list(col = c("cyan3", "purple3")))
+```
+
+Net of someone's student status, for each \$1,000 more a person makes in income corresponds with a roughly \$6 increase on average in the amount of credit card debt they will hold. Holding someone's income constant, a students will have \$382 more in average credit card debt when compared to non-students. Both predictors are statistically significant. On the whole, my expectation was confirmed as students are more likely on average to have a higher credit card balance than non-students. In the graph above, the purple line represents the regression line for students and the teal line represents non-students. This graph reflects what I anticipated finding before running the linear regression model.
+
+## 2. Mediating Variable
+
+**Prompt: Add an interaction term to that model that you think might moderate the original relationship between X1 and X2. Explain why you think an interaction might be present and in what direction it would work. Explain your results. Did it work out? Yes? No?**
+
+There is the chance, however, that one's student status and income interact together that might mask the true relationship between themselves and a person's credit card balance. Income may operate differently for students and non-students; in other words, an interaction may exist between the two. Students could be more acutely aware of their non-work status. As a result, students would try to only charge 'essential' purchases to their credit card, whereas who are not students would not have that consideration. 
+
+```{r}
+lm2 <- lm(Balance ~ Income + Student + Income:Student, data = credit)
+summary(lm2)
+
+library(tidyverse)
+graph1 <- ggplot(credit, aes(x = Income, y = Balance, 
+                             group = Student, color = Student)) + 
+  stat_smooth(method = "lm", se = FALSE)
+graph1
+```
+
+For non-students (student = 0) at the intercept (income = 0), they hold on average \$200  in credit card debt. For these non-students (student = 0), they gain \$6.21 in credit card debt on average for each additional \$1,000 they earn in income. For students (student = 1) who have no income (income = 0), they have on average \$476.68 more in credit card debt than non-students for a total of \$677.30 in credit card debt. Students add roughly \$2 less to their credit card balance on average for every \$1,000 they earn compared to non-students.
+
+The graph above illustrates the difference in regression lines for the two groups, students and non-students. Unfortunately, the interaction term is not statistically significant, so the relationship between income and student status lacks any robust features at this point. To further confirm this point, I ran an analysis of variance below.
+
+```{r}
+anova(lm1, lm2)
+```
+
+The results of ANOVA did not come back statistically significant, either. On the whole, the interaction term did not add any value to the model. We cannot say that the inclusion of this interaction term did any better to explain someone's average balance of credit card debt.
+
+I'm curious about the bigger picture takeaway from this finding. I remember Professor Eirich spoke in class about Andrew Gelman's suggestion: if two variables are statistically significant on their own, then it's usually a good idea to see if they interact together. This wasn't the case here, and I should not expect statistically significant predictors to result in a valid interaction term. Rather, I am curious if there is any more substantive takeaway here other than what I found: that these two variables are statistically significant independent of each other, but not as an interaction term. As a further avenue of study, more predictors could be included to increase the amount of variation explained through the adjusted R-squared.

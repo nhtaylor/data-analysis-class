@@ -1,0 +1,189 @@
+---
+title: "GR4015 Data Analysis Lab #3"
+author: "Nathan Taylor"
+date: "Wednesday, October 18, 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: yeti
+    highlight: tango
+---
+
+## 1. Bivariate Regression
+
+**Prompt: Run a simple bivariate regression, and interpret your results. Did the results fit your expectations? Why? Why not?**
+
+Using data from the 2006 General Social Survey, I chose to examine the number of hours people work and their income in constant dollars. Going in, I imagine there might be a chance that the number of hours a person worked, as captured by *hrs1*, would positively correlate with their income, measured through *realrinc*. A core tenant of WASP industry is that work will reap its own rewards, and this exercise should determine whether this cultural notion holds any factual purpose. I have included the following table to illustrate the datum collected for *hrs1*; *realrinc* should be a ratio variable already.
+
+Hours Worked | N | Mean | Standard Deviation
+------------- | ------------- | ------------- | -------------
+Total | 2765 | 42.608 | 15
+
+Before I ran the regression model, I recoded *realrinc* into thousands of dollar in order to expedite analysis. Additionally, I subsetted the data used ina the regression model below to include only people who provided their education level for future analyses.
+
+```{r}
+library(readr)
+gss <- read_csv("~/Documents/Columbia/S1/DASS-Eirich/Assignments/17.09.27_Lab1/GSS.2006.csv")
+
+gss$realrinc1000s <- gss$realrinc / 1000 
+
+lm1 <- lm(realrinc1000s ~ hrs1, 
+      data = gss, 
+      subset = !is.na(educ))
+summary(lm1)
+```
+
+The results of this linear model demonstrates a strong relationship between the number of hours worked and one's income. For each additional hour someone works, there is a $554 dollar increase in his or her income on average. The t-statistic and corresponding p-value demonstrate the statistical significance of this relationship, and the adjusted r-squared shows that this model can account for a roughly 8% of the variance. Roughly speaking, my expectations were met and the model fits a general understanding of labor economics -- if you work more, you'll earn more financial compensation.
+
+
+## 2. Mediating Variable
+
+**Prompt: Add an additional variable that might mediate or partly "explain" the initial association from that simple regression above -- and explain your results. Did it work out? Yes? No?**
+
+Weekly hours worked aren't the entire story, however, when it comes to the income one earns. In fact, the question for *hrs* asks respondents to provide the number of hours they worked last week and not on their usual amount or average. The entire question is stated as: How many hours did you work last week, at all jobs? Beyond the issues the question's wording raises, another variable that might mediate the effect of the number of hours a person works has on their income is an individual's education. Below are the GSS's responses for a respondent's education as measured by *educ*.
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+0 | No formal schooling | 22 | 0.5
+1 | 1st grade | 4 | 0.1
+2 | 2nd grade | 28 | 0.6
+3 | 3rd grade | 13 | 0.3
+4 | 4th grade | 11 | 0.2
+5 | 5th grade | 23 | 0.5
+6 | 6th grade | 69 | 1.5
+7 | 7th grade | 32 | 0.7
+8 | 8th grade | 85 | 1.9
+9 | 9th grade | 127 | 2.8
+10 | 10th grade | 152 | 3.4
+11 | 11th grade | 215 | 4.8
+12 | 12th grade | 1204 | 26.7
+13 | 1 year of college | 422 | 9.4
+14 | 2 years of college | 628 | 13.9
+15 | 3 years of college | 212 | 4.7
+16 | 4 years of college | 687 | 15.2
+17 | 5 years of college | 167 | 3.7
+18 | 6 years of college | 208 | 4.6
+19 | 7 years of college | 78 | 1.7
+20 | 8 years of college | 112 | 2.5
+
+In theorizing why education may have a mediating effect, people with greater educational credentials may have access to unique industries, social networks, and employment opportunities within the national labor market that demand greater specialization and technical skill that are tied to greater financial compensation. The following model adds the *educ* variable to the previous model to test out this hypothesis.
+
+```{r}
+lm2 <- lm(realrinc1000s ~ hrs1 + educ, 
+          data = gss)
+summary(lm2)
+
+library(stargazer)
+stargazer(lm1, lm2, type = "text")
+```
+
+On the whole, the results from the second linear model reflect a more robust model than the first. Holding weekly hours worked constant, a person increases their income \$2,459 dollar more on average for each additional educational year they complete. In contrast, a person who works an additional hour more each week can earn an additional \$500 to their salary when education is held constant. Both of these relationships are statistically significant, yet it appears that *educ* has a larger impact on income than *hrs1*.
+
+In term of mediation, it does appear that education has a marginal mediating effect on the impact that hours worked has on income earned. In the first model, weekly hours worked had a coefficient of .554 and that was reduced to .505 in the second model once *educ* was accounted for. In other words, a person's education "captures" roughly \$50 of people's earnings they would receive by increasing the number of weekly hours they would work when not accounting for education. This observation appears logical. One would expect education to have a substantial influence on labor market oppportunities and access to higher paying jobs while the numbers of hours someone has represents a valuable contribution.
+
+
+## 3. Multiple Regression
+
+**Prompt: Run another multiple regression. Tell me how you expect your dependent variable to be affected by the independent variables. Interpret your results.**
+
+I decided to examine what might influence or predict the frequency of someone having sex in the last 12 months. Sexual frequency, as measured by *sexfreq* is an ordinal variable where people were asked "About how often did you have sex during the last 12 months?" and responses were recorded as found in the table below.
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+0 | Not at all | 595 | 24.6
+1 | Once or twice | 202 | 8.5
+2 | About once a month | 265 | 11.0
+3 | 2 or 3 times a month | 361 | 15.0
+4 | About once a week | 343 | 14.2
+5 | 2 or 3 times a week | 430 | 17.8
+6 | More than 3 times a week | 134 | 5.6
+
+One causal reason to think that sex may occur more frequently would be a person's measure of their own health. The General Social Survey captures someone's subjective feelings about their heal through a called titled *health1*. Respondents were asked "Would you say that in general your health is excellent, very good, good, fair, or poor?" and their responses were tabulated as such:
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | Excellent | 451 | 26.0
+2 | Very good | 496 | 28.6
+3 | Good | 556 | 32.1
+4 | Fair | 196 | 11.3
+5 | Poor | 23 | 1.3
+
+Health alone, however, would not be the only thing to influence someone's sexual activities. For instance, it's commonly understood that sexuality has various cultural and religious taboos surrounding it, so I included *reliten* as a measure of someone's strength of religious convictions. I would predict that someone's religious convictions would have a negative relationship with the frequency to which they engaged in sexual activities. Per *reliten*, respondents were asked, "Would you call yourself a strong (stated religious preference) or not a very strong (stated religious preference)?" Responses to *reliten* were coded as followed:
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | Strong | 1616 | 35.8
+2 | Not very strong | 1632 | 36.2
+3 | Somewhat strong | 482 | 10.7
+4 | No religion | 739 | 16.4
+
+Finally, I chose to add in respondent's age as a predictor of sexual frequency. After examining the mean for respondent's age (47.3), I decided to predict that *age* would have a negative relationship on *sexfreq*. Age is a tricky variable because I could see it influencing the direction of the relationship depending on the distribution of ages within the sample being surveyed. Age data from the GSS is below.
+
+. | N | Mean | Standard Deviation
+------------- | ------------- | ------------- | -------------
+Total | 4510 | 47.349 | 17
+
+Before creating my model, I recoded *reliten* and *health1* to improve the interpretation of my results. Furthermore, I subsetted the data for future analysis to require that a respondent also provided an answer to the *marital* variable.
+
+```{r}
+gss$relst <- 5 - gss$reliten
+gss$health1 <- 6 - gss$health1
+
+lm3 <- lm(sexfreq ~ relst + health1 + age, 
+      data = gss, 
+      subset = !is.na(marital))
+summary(lm3)
+```
+
+There is a statistically significant relationship between age and sexual frequency as well as health and sexual frequency. Controlling for health and religious conviction, an increase in one year of age will reduce your score in the ordinal categories of sex by 0.04. Conversely, for everyone category your health includes will correspond to a .249 increase in one's sexual frequency while holding religious conviction and age constant. Surprisingly, religious conviction does not have a statistically significant relationship. Overall, the low r-squared score of .109 shows that there is a good amount of variance not captured by this model.
+
+
+## 4. Dummy Variable Addition
+
+**Prompt: Now add another independent variable to that model in Question 3, preferably a set of dummy variables. Tell me why you added that new set of variables and what effect you expected them to have. Did they have an effect? Interpret that new model.**
+
+After examining the results from the prior model, I wondered how the outcome would differ if I included a variable that measured someone's marital status. I envision the fact that we are including marriage status's effect on sexual frequency would have a moderate, if not significant influence as marriage status would indicate whether someone is (supposedly) monogamously paired with someone in an institution designed to legitimize sexual relations. The variable *marital* asks respondents their marriage status, and the responses are found below in the table.
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | Married | 2170 | 48.1
+2 | Widowed | 366 | 8.1
+3 | Divorced | 732 | 16.2
+4 | Separated | 156 | 3.5
+5 | Never Married | 1080 | 23.9
+
+Outside of marriage itself, I think that widowed people would probably have a negative relationship with *sexfreq*, as someone who is a widow is, on average, more likely to be older and the prior model has already established that age has a negative relationship with the frequency of sexual activity. In addition, I would imagine that divorced and separated people have a positive relationship with sex relative to people who have never married but perhaps at a lesser magnitude that married people.
+
+I added labels to the *marital* variable and set the reference to "never married" so that I could examine the effects of marriage and other marriage-related status compared to those who never married.
+
+```{r}
+gss$m.f <- factor(gss$marital, levels = c(1, 2, 3, 4, 5), 
+        labels = c("Married", 
+              "Widowed", 
+              "Divorced", 
+              "Separated", 
+              "Never.Married"))
+
+lm4 <- lm(sexfreq ~ relst + health1 + age + relevel(m.f, ref = 5), 
+      data = gss)
+summary(lm4)
+
+stargazer(lm3, lm4, type = "text")
+```
+
+Adding the *marital* variable appears consequential. The r-squared value doubled in comparison to the previous model, and many statistically significant relationships arose from the *marital* variable. Holding religious conviction, health, and age constant, a married person is going to be 1.39 categories higher in sexual frequency on average than someone who has never married. 
+
+In fact, people who were married, divorced, or separated all had a statistically significant relationship with *sexfreq*. To my surprise, people who were widowed  maintained a positive relationship with sex although it wasn't statistically significant. The previously included variables retained their coefficients size for the most part as well as their statistically significance (with religious conviction even gaining it at p>.05). On face value, the inclusion of *marital* was appropriate in describing people's frequency of sexual activity.
+
+
+## 5. Partial F-test
+**Prompt: Now run a partial F test comparing the model in Question 3 to the model in Question 4. Does the F test support the idea of adding those new variables? Why? Why not?**
+
+Although the previous model with the dummy variables for marital status improved the adjusted r-squared, it still isn't certain yet that the model itself is substantively different than the model without marital status. In order to test this assumption, I will need to run a partial f-test to see whether marital status collectively is a statistically significant factor for frequency of sexual activity.
+
+```{r}
+anova(lm3, lm4)
+```
+
+According to the results of the analysis of variance test, the F value of 42.339 is statistically significant (P<.001). Interpreting this finding, it appears that including marital status, even with one of its factors not being statistically significant, improves the fit when compared to the simpler model in `lm3`. In other words, the partial f-test supports the inclusion of marital status when trying to predict frequency of sexual activity because the partial f-test determined that the difference between the two models was statistically significant.
