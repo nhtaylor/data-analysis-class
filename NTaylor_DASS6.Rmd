@@ -1,0 +1,93 @@
+---
+title: "QMSS 4015 Data Analysis Lab #6"
+author: "Nathan Taylor"
+date: "Wednesday, December 6, 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: yeti
+    highlight: tango
+---
+
+```{r, results = 'hide', message = FALSE, warning = FALSE}
+## PACKAGES
+g <- read.csv("~/Documents/Columbia/S1/DASS-Eirich/Assignments/17.12.06_Lab6/panel-for-R.csv")
+library(plm)
+library(QMSS)
+```
+
+## 1. Pooled OLS Regression
+**Prompt: Run a naive ("pooled") OLS regression on the panel data.  Tell we how you expect your Xs to affect your Y and why.  Apply clustered standard errors too.  Interpret your results.**
+
+In this lab, I will examine whether having children influences someone's views on abortion. I am curious whether having children verses having none would make someone more or less likely to agree with a woman's right to an abortion for any reason she chose. The abortion variable used in this lab, *abany*, asked the question, "Please tell me whether or not you think it should be possible for a pregnant woman to obtain a legal abortion if the woman wants it for any reason?" Respondents who said "no" were as 0 and those who said "yes" were coded as 1. I will recode the *childs* variable into a binary variable where someone with no children will take the value of zero while anyone with one or more children will take the value of 1.
+
+For my model, I included four control variables. First, I included a measure of respondents' age. As people age, they may become less likely to see abortion for any reason as a justifiable position. Second, I included gender as a predictor since abortion is a medical procedure predominantly done on women. Consequently, women may find abortion for any reason more acceptable than men. Third, I included a measure for respondent's religious preference, where 0 is no preference and 1 is any elective position. I wanted to measure whether having a religious preference in itself would influence someone's views on abortion. Lastly, I included religious attendance as a measure to see whether the frequency of someone's religious practice might have a separate and distinct influence on their abortion views. In both predictors related to religion, I imagine that religious identification or greater frequency of religious practice would predict more negative opinions on a woman's right to an abortion for any purposes she chose.
+
+
+```{r}
+## recoding variables
+g$kid.ever <- ifelse(g$childs == 0, 0, 1)
+g$relig.ever <- ifelse(g$relig == 4, 0, 1)
+g$sex <- g$sex - 1 ## female as 1, male as 0
+table(g$abany)
+g$abany <- 2 - g$abany
+table(g$abany)
+
+## running naive ols
+lm1 <- lm(abany ~ kid.ever + age + sex + relig.ever + attend,
+          data = g)
+summary(lm1)
+
+clusterSE(fit = lm1, cluster.var = "idnum", data = g) 
+```
+
+With a naive linear probability model, four of the five coefficients returned as statistically significant. Their interpretation may be found on the table below.
+
+Variable Name | Coefficient Interpretation | Statistical Significance (for cluster SE)
+------------- | ------------- | -------------
+*kid.ever* | Having any number of children, as opposed to none, leads to a -.07 percentage point change on average in someone's likelihood to believe a woman can have an abortion for any reason, net of all other factors. | The coefficient for *kid.ever* is statistically significant at p < .001.
+ | |
+*age* | For every year someone ages, he or she becomes 0.14 percent points more likely on average to agree that a woman should be able to get an abortion for any reason she wants, net of all other factors.  | The coefficient for *age* is statistically significant at p < .01.
+ |  |
+ *sex* | Being female, as opposed to being a male, increases one's likelihood of agreeing that women should be able to get an abortion for any reason she wants by 2.8 percentage points on average, net of all other factors. | The coefficient for *sex* is not statistically significant.
+ |  |
+ *relig.ever* | Having a religious preference, as opposed to having none, leads to a 12.8 percentage point decrease on average in someone's likelihood to believe a woman can have an abortion for any reason, net of all other factors. | The coefficient for *relig.ever* is statistically significant at p < .001.
+ |  |
+ *attend* | For every increase in category of religious attendance, a person decreases their likelihood to believe a woman can have an abortion for any reason by 5 percentage points on average, net of all other factors. | The coefficient for *attend* is statistically significant at p < .001.
+
+For the most part, my results returned as expected. Having children decreases your opinions for *abany*, although not as much as someone's religious preference or if someone at least several times per year). The one surprise would be the marginal effect that sex has on predicting abortion attitudes. Although it had a slight impact on someone's beliefs, it did not return as statistically significant.
+
+
+## 2. First Differences Regression
+**Prompt: Run a first differences regression on the same model in Question 1.  Interpret your results.  Do you draw a different conclusion than in Question 1?  Explain.**
+
+The naive OLS model above treated the 6,000 observations in the panel dataset as independent variables. In panel data, however, the observations recorded by the same respondent (in the case of survey data) across different panel waves are not independent of each other. Accordingly, I actually do not have that many independent observations. Instead, the panel data includes 2,000 people across three difference panel waves. To take this  qualification in to account, I need to run a first differences regression using the same model specified above. Running a first differences regression will allow me to examine how a person's views on abortion may change based on the children they have had, holding all other factors about them constant.
+
+
+```{r}
+plm1 <- plm(abany ~ kid.ever + age + sex + relig.ever + attend,
+            index = c("idnum", "panelwave"),  
+            model = "fd", 
+            data = g)
+
+summary(plm1)
+
+clusterSE(fit = plm1, cluster.var = "idnum", data = g)
+```
+
+None of my variables returned as statistically significant. A quick glance of my results would suggest that having children does not immediately effect someone's views on abortion. The interpretation for each individual coefficient may be found in the table below.
+
+Variable Name | Coefficient Interpretation | Statistical Significance (for cluster SE)
+------------- | ------------- | -------------
+*kid.ever* | Having any number of children, as opposed to none, leads to a 7 percentage point increase on average in someone's likelihood to believe a woman can have an abortion for any reason, for the same person across 3 waves of data, net of wave and other factors. | The coefficient for *kid.ever* is not statistically significant.
+ | |
+*age* | For every year someone ages, they become 0.12 percent points less likely on average to agree that a woman should be able to get an abortion for any reason she wants, for the same person across 3 waves of data, net of wave and other factors.  | The coefficient for *age* is not statistically significant.
+ |  |
+ *sex* | Being female, as opposed to being a male, decreases one's likelihood of agreeing that women should be able to get an abortion for any reason she wants by 29 percentage points on average, for the same person across 3 waves of data, for the same person across 3 waves of data, net of wave and other factors. | The coefficient for *sex* is not statistically significant.
+ |  |
+ *relig.ever* | Having a religious preference, as opposed to having none, leads to a 0.7 percentage point decrease on average in someone's likelihood to believe a woman can have an abortion for any reason, for the same person across 3 waves of data, for the same person across 3 waves of data, net of wave and other factors. | The coefficient for *relig.ever* is not statistically significant.
+ |  |
+ *attend* | For every increase in category of religious attendance, a person decreases their likelihood to believe a woman can have an abortion for any reason by 0.9 percentage points on average, for the same person across 3 waves of data, for the same person across 3 waves of data, net of wave and other factors. | The coefficient for *attend* is not statistically significant.
+
+After running the first differences model, two of my predictors returned as statistically significant before applying the clustered standard errors. Afterward, none remained statistically significant. True to what Professor Eirich said in class, this model did better at disproving my earlier hypothesis after accounting for the dependence of observations. Given the small number of people who went from zero children to some children, there was not enough of marked change in their attitudes toward *abany* to observe a statistically significant relationship between having children and one's abortion attitudes.

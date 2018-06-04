@@ -1,0 +1,225 @@
+---
+title: "GR4015 Data Analysis Lab #5"
+author: "Nathan Taylor"
+date: "Wednesday, November 15, 2017"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: yeti
+    highlight: tango
+---
+
+## 1. Multiple Linear Probability Model
+
+**Prompt: Run a multiple linear probability model. Tell me how you think your independent variables will affect your dependent variable. Interpret your results. Were your expectations correct? Why or why not?**
+
+In this lab, I am going to explore the question "what demographic factors would predict someone feeling any sense of closeness to African Americans?" The 2006 General Social Survey allows me to use several different variables that I outline in the following bullets:
+
+* Someone who identifies as black them self would intuitively increase one's feelings of closeness to African Americans. I will create a dummy variable around the *race* variable coded for black and non-black. Similarly, I will probably code a separate dummy variable for whiteness to measure its exact effect.
+* I will throw in age as well in to my model, and would only guess that it would have a negative relationship with feeling close to African Americans. I would not be surprise if this returned as statistically insignificant however.
+* On the surface, education appears as a possible source of feeling closeness to people of different racial identities. It would be interesting to see if education would have any effect on someone feeling close to African Americans. At the same time, there may be no correlation.
+* Although it isn't necessarily a demographic variable, I am curious to see how religious attendance would influence a person's sense of closeness to African Americans. For similar reasons, I will also include a variable for the sex of the respondent. I don't have a strong idea as to what impact these variables will have.
+* Finally, I wanted to include a variable that measured how frequently someone may come into contact with African Americans. I plan on including the variables that asks how many black people the respondent is acquainted with as well as a question asking how many black people they trust. The idea behind these variables is that someone with greater exposure and trust toward African Americans would be more likely to respond being close to them as well. From a theoretical standpoint, there is the concern that these variables might be capturing the same underlying thing that closeness to black people captures. I will return to this issue at the end of the lab.
+
+My dependent variable, labeled as *closeblk* in the GSS, asked respondents to answer the following question: "In general, how close do you feel to Blacks?" Its response distribution can be found in the following table.
+
+Response Codes | Response Options | Total Responses | Response Percentages
+------------- | ------------- | ------------- | -------------
+1 | Not at all close | 107 | 5.3
+2 | 2 | 42 | 2.1
+3 | 3 | 54 | 2.7
+4 | 4 | 69 | 3.4
+5 | Neither one feeling nor the other | 891 | 44.5
+6 | 6 | 164 | 8.2
+7 | 7 | 260 | 13.0
+8 | 8 | 93 | 4.6
+9 | Very close | 312 | 15.6
+
+Below is the code responsible for recoding my variables and running this model as specified above. Please note that my dependent variable, *closeblk*, has been recoded so that any response greater than the median choice (a 5, which corresponded to 'Neither one feeling nor the other') would be recoded to 1 and other other responses taking on the value of 0. This choice could have implications on my findings worth discussing later on.
+
+```{r}
+library(readr)
+gss <- read_csv("~/Documents/Columbia/S1/DASS-Eirich/Assignments/17.09.27_Lab1/GSS.2006.csv")
+
+## subset data frame
+sub <- gss[, c("race", "sex", "age", "attend", "educ", "acqblack", "trtblack",
+               "closeblk")]
+
+## female now equal 1, male as zero
+sub$sex <- sub$sex - 1
+
+## black dummy variable
+sub$black <- ifelse(sub$race == 2, 1, 0)
+
+## white dummy variable
+sub$white <- ifelse(sub$race == 1, 1, 0)
+
+## recoding dependent variable
+sub$close <- ifelse(sub$closeblk >= 6, 1, 0)
+
+# linear probability model
+lpm1 <- lm(close ~ black + white + age + attend + educ + acqblack + trtblack, 
+           data = sub)
+summary(lpm1)
+```
+
+For ease of organization, I have placed my interpretation of the coefficients in the table below and hid the data frame that included the results.
+
+```{r, echo = FALSE}
+results1 <- matrix(c("black", "white", "age", 
+                         "attend", "educ", "acqblack", "trtblack",
+                         "Being black (versus non-black) decreases one’s likelihood of feeling close to black people by 6.8 percentage points on average, holding all other factors equal.", "Being white (versus non-white) makes someone 11.4 percentage points less likely to feel close to black people on average, net of all other factors.", "For every year someone ages, that person is 0.19 percentage points less likely to feel close to black people on average, holding all other factors constant.", "For every category increase in religious attendance, a person is 0.2 percentage points more likely to feel close to black people on average, net of all other factors.", "For every additional year of education someone has, that person is 0.5 percentage points more likely to feel close to black people on average, holding all other factors equal.", "For every category increase someone has in the black acquaintances they know, that person is 4.6 percentage points more likely to feel close to black people on average, holding all other factors constant.", "For every category increase someone has in the black people they trust, that person is 9.4 percentage points morel likely to feel close to black people on average, net of all other factors.",
+                        "The coefficient for black is not statistically significant.", "The coefficient for white is not statistically significant.", "The coefficient for age is not statistically significant.", "The coefficient for attend is not statistically significant.", "The coefficient for educ is not statistically significant.", "The coefficient for acqblack is statistically significant at p<.05.", "The coefficient for trtblack is statistically significant at p<.001."),
+            nrow = 7,
+            ncol = 3)
+colnames(results1) <- paste(c("Independent Variable",
+                              "Coefficient Interpretation",
+                              "Statistical Significance"))
+```
+
+```{r}
+library(kableExtra)
+library(knitr)
+kable(results1,format = "html", booktabs = T) %>% 
+  kable_styling(latex_options = c("striped", "scale_down"))
+```
+
+Curiously enough, what I predicted to be my strongest independent variable, *black*, actually returned a negative coefficient. Several other estimates did not return as  statistically significant. The two that did in fact have significance made sense to me. Having black acquaintances and having black people you trust on average makes you more likely to feel close to black people. What's interesting about those variables is the fact that they could easily have been coded as integer variables but the GSS decided to lump them into categories for some reason related to their data collection. As a result, they lose the chance of capturing more variance had they used integer values. 
+
+Moreover, there is an issue with the causal chain that I have specified. Someone could argue that being close to African Americans makes someone more likely to have African American acquaintances and trust them more. If this is true, then my model would be mis-specified. The more I think about it, the more certain I feel in disagreeing with this concern. I would think that someone's experiences, meaning their acquaintances and people they trust, would influence how they felt about a certain group of people. But it's possible that a "two-way street" exists between the two, meaning they are mutually reinforcing.
+
+Furthermore, someone might argue that my research design and causal chain depends on people generalizing from the black people that respondents knows to all black people in general. They would argued that the logic underneath my model's design relies on a rests on essentializing racial groups. This 'essentialization' relies on people's individuality being erased while at the same time reducing them down to their common denominator, which in this case is their race. There might be a way forward that I could test the extent to which people themselves essentialize different racial groups, which would offer its own insights. Given these issues, it would require serious theoretical consideration through a comprehensive literature review to pursue this line of research any further.
+
+A separate issue is the recoding I did for my dependent variable, *closeblk*. If I were to run the tests again, I might increase the barrier to which someone must feel close to black people from 6 to possibly seven or eight. By restricting the magnitude with which I define "closeness to African Americans", I might be drawing on a more specific sample of people that might translate to more statistically significant results. It is entirely possible, however, that nothing could change because the group of people registering those values would in all likelihood be smaller. Only running the model again would clarify this issue.
+
+
+## 2. Multiple Binary Logistic Model
+
+**Prompt: Run a multiple (binary) logistic model. It can be the same as the above LPM or -- even better -- a new model. Tell me how you think your independent variables will affect your dependent variable. Interpret your results in the logit scale. Were your expectations correct? Why or why not?**
+
+Originally, I wanted to examine how people's responses to various questions in the GSS surrounding race could predict someone's political party identification. The text codebook provided a number of different variables that looked promising given their description label. However once I view the questions online, the framing of the questions and their form and shape of the responses made me question their validity in asking the research question I was interested in. As a result, I decided to return to my previous model.
+
+For the multiple (binary) logistic regression, I will look as the same model as before, but instead increase the threshold from 6 to 7 as a means to see whether my previous expectations would hold up within a logistic regression framework.
+
+```{r}
+## new, more restrictive closeness to black people variable
+sub$klose <- ifelse(sub$closeblk >= 7, 1, 0)
+
+##logistic regression
+logit1 <- glm(klose ~ black + white + age + attend + educ + acqblack + trtblack, 
+            data = sub, 
+            family = binomial)
+summary(logit1)
+```
+
+Similar to my previous interpretations, the generalized linear model's results can be found in the table below.
+
+```{r, echo = FALSE}
+results2 <- matrix(c("black", "white", "age", 
+                     "attend", "educ", "acqblack", "trtblack",
+                     "Being black (versus non-black) decreases a person’s logit by .06 of feeling close to black people, net of all other factors.", "Being white (versus non-white) decreases a person’s logit by .82 of feeling close to black people, net of all other factors.", "For every additional year someone ages, a person decreases their logit by .004 of feeling close to black people, net of all other factors.", "For every category increase in religious attendance, a person increases their logit by .03 of feeling close to black people, net of all other factors.", "For every year of education someone obtains, they increase their logit by .03 of feeling close to black people, net of all other factors.", "For every category increase in black acquaintances, a person increases their logit by .12 of feeling close to black people, net of all other factors.", "For every category increase in black people they trust, a person increases their logit by .408 of feeling close to black people, net of all other factors.",
+                     "The coefficient for black is not statistically significant.", "The coefficient for white is statistically significant at p<.05.", "The coefficient for age is not statistically significant.", "The coefficient for attend is statistically significant at p<.05.", "The coefficient for educ is not statistically significant.",  "The coefficient for acqblack is not statistically significant.", "The coefficient for trtblack is statistically significant at p<.001."),
+            nrow = 7,
+            ncol = 3)
+colnames(results2) <- paste(c("Independent Variable",
+                              "Coefficient Interpretation",
+                              "Statistical Significance"))
+```
+
+```{r}
+library(kableExtra)
+library(knitr)
+kable(results2,format = "html", booktabs = T) %>% 
+  kable_styling(latex_options = c("striped", "scale_down"))
+```
+
+Even after making closeness to African Americans more restrictive, my results stayed nearly the same as the old model and consequently, did not live up to my expectations. Black acquaintances lost its statistical significance while being white gained statistical significance. Insofar as I can compare across these two models, it appears that restricting closeness to African Americans made the whiteness more statistically significant. On the whole, however, it doesn't appear as if this model did any better at explaining what I had hope to.
+
+
+## 3. Odds Ratios
+
+**Prompt: Get odds ratios from your logit model in Question 2 and interpret some of them.**
+
+In the code below, I find the odds ratios for the previous model and interpret a number of them.
+
+```{r}
+#exponentiating the coeff of logit model
+exp(coef(logit1))
+```
+
+*black* = Controlling for all other factors, being black (versus non-black) decreases a person's odds of feeling close to black people by 6%, calculated by (.94 - 1) * 100, which represents a proportional increase and not an absolute one. This result was not a statistically significant result, however, from the binary logistic regression model in section 2.
+
+*white* = Controlling for all other factors, being white (versus non-white) decreases a person's odds of feeling close to black people by 56%, calculated by (.44 - 1) * 100, which represents a proportional increase and not an absolute one. This result was statistically significant at p<.05 from the binary logistic regression model in section 2.
+
+*trtblack* = Net of all other factors, for every category increase in black people a person trusted, their odds of feeling close to black people increases by 50%, calculated by (1.50 - 1) * 100, which represents a proportional increase and not an absolute one. This result was statistically significant at p<.001 from the binary logistic regression model in section 2.
+
+
+## 4. Predicted Probabilities
+
+**Prompt: Get predicted probabilities from your logit model in Question 2 for some constellations of X values and interpret the results.**
+
+Below are my interpretations of predicted probabilities for four different constellations of X values taken from the odds ratios above.
+
+```{r}
+## constellation 1, emphasis on whites with no black acquaintances or confidants
+predict(logit1, 
+        type = "response", 
+        newdata = data.frame(black = 0, 
+                             white = 1, 
+                             educ = mean(sub$educ, na.rm = T), 
+                             attend = mean(sub$attend, na.rm = T), 
+                             age = mean(sub$age, na.rm = T), 
+                             acqblack = 1, 
+                             trtblack = 1))
+```
+
+The predicted probability for someone who is white, has the average education, attends religious services on average, is the average age, has no Black/African American acquaintances, and trusts no one who is Black/African American is .165, which is a 16.5% probability that they feel close to African Americans.
+
+```{r}
+## constellation 2, emphasis on whites with a few black acquaintances 
+## and a few confidants
+predict(logit1, 
+        type = "response", 
+        newdata = data.frame(black = 0, 
+                             white = 1, 
+                             educ = mean(sub$educ, na.rm = T), 
+                             attend = mean(sub$attend, na.rm = T), 
+                             age = mean(sub$age, na.rm = T), 
+                             acqblack = 3, 
+                             trtblack = 3))
+```
+
+The predicted probability for someone who is white, has the average education, attends religious services on average, is the average age, has 2-5 Black/African American acquaintances, and trusts 2-5 Black/African American people is .364, which is a 36.4% probability that they feel close to African Americans.
+
+```{r}
+## constellation 3, emphasis on blacks with a few black acquaintances 
+## and a few black confidants
+predict(logit1, 
+        type = "response", 
+        newdata = data.frame(black = 1, 
+                             white = 0, 
+                             educ = mean(sub$educ, na.rm = T), 
+                             attend = mean(sub$attend, na.rm = T), 
+                             age = mean(sub$age, na.rm = T), 
+                             acqblack = 3, 
+                             trtblack = 3))
+```
+
+The predicted probability for someone who is black, has the average education, attends religious services on average, is the average age, has 2-5 Black/African American acquaintances, and trusts 2-5 Black/African American people is .552, which is a 55.2% probability that they feel close to African Americans.
+
+```{r}
+## constellation 4, emphasis on blacks with numerous black acquaintances 
+## and numerous black confidants
+predict(logit1, 
+        type = "response", 
+        newdata = data.frame(black = 1, 
+                             white = 0, 
+                             educ = mean(sub$educ, na.rm = T), 
+                             attend = mean(sub$attend, na.rm = T), 
+                             age = mean(sub$age, na.rm = T), 
+                             acqblack = 5, 
+                             trtblack = 5))
+```
+
+The predicted probability for someone who is white, has the average education, attends religious services on average, is the average age, has more than 10 Black/African American acquaintances, and trusts more than 10 Black/African American people is .782, which is a 78.2% probability that they feel close to African Americans.
