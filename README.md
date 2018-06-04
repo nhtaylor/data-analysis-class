@@ -1,6 +1,6 @@
 # Data Analysis Course
 
-This repo will house the code I made for my Data Analysis in the Social Sciences course from Fall 2017. This readme will be work in progress until I successfully upload everything. These were my early days in R, so forgive the code.
+This repo will house the code I made for my Data Analysis in the Social Sciences course from Fall 2017. Greg Eirich taught this course as part of the QMSS program at Columbia University. These were my early days in R, so forgive the code.
 
 Lab 1: Descriptive Statistics, Subgroup Summaries, & Cross Tabulating Variables (data in folder)
 
